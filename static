@@ -1,0 +1,62 @@
+chat.js-----
+let ws = null;
+const messagesDiv = document.getElementById('messages');
+const connectBtn = document.getElementById('connectBtn');
+const sendBtn = document.getElementById('sendBtn');
+const usernameInput = document.getElementById('username');
+const msgInput = document.getElementById('msg');
+
+function addMessage(text, cls='message') {
+    const el = document.createElement('div');
+    el.className = cls;
+    el.innerHTML = text;
+    messagesDiv.appendChild(el);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+async function loadHistory() {
+    try {
+        const res = await fetch('/history?limit=200');
+        const data = await res.json();
+        data.forEach(item => {
+            addMessage(`<span class="meta">${item.username}</span>: ${item.message}`);
+        });
+    } catch (e) {
+        console.warn('Could not load history', e);
+    }
+}
+
+connectBtn.addEventListener('click', async () => {
+    const username = usernameInput.value.trim();
+    if (!username) { alert('Please enter a username'); return; }
+    // open websocket
+    ws = new WebSocket(`ws://${location.host}/ws/${encodeURIComponent(username)}`);
+    ws.onopen = () => {
+        addMessage('Connected to server', 'system');
+        loadHistory();
+    };
+    ws.onmessage = (evt) => {
+        const msg = JSON.parse(evt.data);
+        if (msg.type === 'system') {
+            addMessage(`<em class="system">${msg.text}</em>`, 'system');
+        } else if (msg.type === 'chat') {
+            addMessage(`<span class="meta">${msg.from}</span>: ${msg.message}`);
+        }
+    };
+    ws.onclose = () => addMessage('Disconnected from server', 'system');
+});
+
+sendBtn.addEventListener('click', () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) { alert('Connect first'); return; }
+    const text = msgInput.value.trim();
+    if (!text) return;
+    ws.send(JSON.stringify({ message: text }));
+    msgInput.value = '';
+});
+
+
+
+
+
+index
+file:///C:/Users/Administrator/AppData/Local/Temp/5723376e-056f-4cbd-bb1b-853a30e08721_real_time_chat_app.zip.721/static/index.html
